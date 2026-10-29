@@ -21,7 +21,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK (libre flavour: no Google Play services, works on Fire TV)
+      # libre flavour: no Google Play services, which Fire TV doesn't have
+      - name: Build APK
         env:
           JELLYFIN_VERSION: 1.0.${{ github.run_number }}
           KEYSTORE_FILE: ${{ github.workspace }}/signing/jellyfin-tv.jks
