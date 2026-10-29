@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nexus launcher icon: cyan hexagon ring with a teal core (108dp adaptive canvas, art within the 66dp safe zone) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- soft glow -->
+    <path
+        android:pathData="M54,22 L81.7,38 L81.7,70 L54,86 L26.3,70 L26.3,38 Z"
+        android:strokeColor="#3340C8FF"
+        android:strokeWidth="9"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M54,22 L81.7,38 L81.7,70 L54,86 L26.3,70 L26.3,38 Z"
+        android:strokeColor="#FF40C8FF"
+        android:strokeWidth="4.5"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FF4FE8D2"
+        android:pathData="M54,40.5 L65.7,47.25 L65.7,60.75 L54,67.5 L42.3,60.75 L42.3,47.25 Z" />
+</vector>

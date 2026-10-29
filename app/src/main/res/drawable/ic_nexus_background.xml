@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nexus navy glow background -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:type="radial"
+        android:centerX="0.3"
+        android:centerY="0.15"
+        android:gradientRadius="120dp"
+        android:startColor="#FF0D3550"
+        android:centerColor="#FF061624"
+        android:endColor="#FF030A12" />
+</shape>
