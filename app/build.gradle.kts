@@ -38,6 +38,8 @@ android {
         versionName = project.getVersionName()
         versionCode = getVersionCode(versionName!!)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // TV build: GitHub Actions run number, compared against the latest release by the self-updater
+        buildConfigField("int", "TV_BUILD", (System.getenv("JELLYFIN_TV_BUILD") ?: "0"))
         vectorDrawables.useSupportLibrary = true
     }
 

@@ -27,6 +27,7 @@ import org.jellyfin.mobile.events.ActivityEventHandler
 import org.jellyfin.mobile.player.cast.Chromecast
 import org.jellyfin.mobile.player.cast.IChromecast
 import org.jellyfin.mobile.player.ui.PlayerFragment
+import org.jellyfin.mobile.update.AppUpdater
 import org.jellyfin.mobile.setup.ConnectFragment
 import org.jellyfin.mobile.utils.AndroidVersion
 import org.jellyfin.mobile.utils.BackPressInterceptor
@@ -145,6 +146,11 @@ class MainActivity : AppCompatActivity() {
 
         // Setup Chromecast
         chromecast.initializePlugin(this)
+
+        // TV build: check GitHub for a newer build (only on a fresh start, not on rotation etc.)
+        if (savedInstanceState == null) {
+            AppUpdater.check(this, lifecycleScope, manual = false)
+        }
     }
 
     override fun onStart() {

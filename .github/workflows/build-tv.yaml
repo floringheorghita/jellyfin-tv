@@ -25,6 +25,7 @@ jobs:
       - name: Build APK
         env:
           JELLYFIN_VERSION: 1.0.${{ github.run_number }}
+          JELLYFIN_TV_BUILD: ${{ github.run_number }}
           KEYSTORE_FILE: ${{ github.workspace }}/signing/jellyfin-tv.jks
           KEYSTORE_PASSWORD: jellyfintv
           SIGNING_KEY_ALIAS: jellyfintv
@@ -35,6 +36,8 @@ jobs:
         run: |
           mkdir -p out
           cp app/build/outputs/apk/libre/release/*.apk out/jellyfin-tv.apk
+          # Read by the in-app updater
+          echo '{"build": ${{ github.run_number }}, "versionName": "1.0.${{ github.run_number }}"}' > out/version.json
           ls -la out
 
       - uses: actions/upload-artifact@v4
@@ -48,6 +51,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest out/jellyfin-tv.apk \
+          gh release create latest out/jellyfin-tv.apk out/version.json \
             --title "Jellyfin TV 1.0.${{ github.run_number }}" \
             --notes "Built from ${{ github.sha }}"
