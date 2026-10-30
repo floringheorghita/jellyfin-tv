@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.OrientationEventListener
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -189,6 +190,18 @@ class MainActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         onBackPressedDispatcher.onBackPressed()
         return true
+    }
+
+    /**
+     * TV build: route remote-control keys to the native player while it is on screen,
+     * so the D-pad can bring back the controls, seek and press "Skip intro".
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (currentFragment is PlayerFragment && currentFragment.isVisible && currentFragment.handleKeyEvent(event)) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onUserLeaveHint() {

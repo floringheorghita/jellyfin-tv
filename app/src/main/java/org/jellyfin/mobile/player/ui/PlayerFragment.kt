@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.OrientationEventListener
 import android.view.View
@@ -298,6 +299,98 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
         playerView.controllerShowTimeoutMs = if (suppress) -1 else DEFAULT_CONTROLS_TIMEOUT_MS
     }
 
+    // ---------------------------------------------------------------------
+    // TV remote (D-pad / media keys)
+    // ---------------------------------------------------------------------
+
+    /** Keys whose ACTION_DOWN we consumed, so the matching ACTION_UP is consumed too. */
+    private val consumedKeys = HashSet<Int>()
+
+    /**
+     * Called by MainActivity for every key event while the player is on screen.
+     * @return true if the event was handled here
+     */
+    @Suppress("CyclomaticComplexMethod", "ReturnCount")
+    fun handleKeyEvent(event: KeyEvent): Boolean {
+        if (_playerBinding == null || !playerView.useController) return false
+        val code = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP) return consumedKeys.remove(code)
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+
+        val handled = onRemoteKeyDown(code, event.repeatCount)
+        if (handled) consumedKeys.add(code)
+        return handled
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun onRemoteKeyDown(code: Int, repeatCount: Int): Boolean {
+        val player = viewModel.playerOrNull ?: return false
+        val controllerVisible = playerView.isControllerFullyVisible
+        val skipButton = playerBinding.skipSegmentButton
+
+        when (code) {
+            // Media buttons work whether or not the controls are showing
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_HEADSETHOOK -> {
+                if (player.isPlaying) player.pause() else player.play()
+                showControls()
+                return true
+            }
+            KeyEvent.KEYCODE_MEDIA_PLAY -> { player.play(); return true }
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> { player.pause(); showControls(); return true }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { onFastForward(); showControls(); return true }
+            KeyEvent.KEYCODE_MEDIA_REWIND -> { onRewind(); showControls(); return true }
+            KeyEvent.KEYCODE_MEDIA_NEXT -> { onSkipToNext(); return true }
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> { onSkipToPrevious(); return true }
+        }
+
+        if (controllerVisible) {
+            // Controls are up: let normal focus navigation move between buttons,
+            // but keep them on screen while the remote is being used.
+            if (isDpadKey(code)) {
+                playerView.showController()
+                if (playerControlsView.findFocus() == null && !skipButton.hasFocus()) {
+                    focusPlayPause()
+                    return true
+                }
+            }
+            return false
+        }
+
+        // Controls hidden
+        return when (code) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (skipButton.isVisible && repeatCount == 0) {
+                    skipButton.performClick()
+                } else {
+                    showControls()
+                }
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { onRewind(); showControls(focus = false); true }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> { onFastForward(); showControls(focus = false); true }
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> { showControls(); true }
+            else -> false
+        }
+    }
+
+    private fun isDpadKey(code: Int) = code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN ||
+        code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT ||
+        code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER
+
+    private fun showControls(focus: Boolean = true) {
+        playerView.showController()
+        if (focus) playerView.post { focusPlayPause() }
+    }
+
+    private fun focusPlayPause() {
+        val skipButton = _playerBinding?.skipSegmentButton
+        if (skipButton != null && skipButton.isVisible) {
+            skipButton.requestFocus()
+        } else {
+            _playerControlsBinding?.root?.findViewById<View>(R.id.exo_play_pause)?.requestFocus()
+        }
+    }
+
     fun isLandscape(configuration: Configuration = resources.configuration) =
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -367,6 +460,15 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
 
     fun onSkipMediaSegment(mediaSegmentDto: MediaSegmentDto?) {
         viewModel.skipMediaSegment(mediaSegmentDto)
+    }
+
+    override fun onInterceptBackPressed(): Boolean {
+        val binding = _playerBinding ?: return false
+        if (binding.playerView.isControllerFullyVisible) {
+            binding.playerView.hideController()
+            return true
+        }
+        return false
     }
 
     fun onPopupDismissed() {

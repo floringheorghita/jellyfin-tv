@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- TV build: visible cyan ring when a control is selected with the remote -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?attr/colorControlHighlight">
+    <item>
+        <selector>
+            <item android:state_focused="true">
+                <shape android:shape="oval">
+                    <solid android:color="#5540C8FF" />
+                    <stroke android:width="2dp" android:color="#FF40C8FF" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="oval">
+                    <solid android:color="@android:color/transparent" />
+                </shape>
+            </item>
+        </selector>
+    </item>
     <item android:id="@android:id/mask">
         <shape android:shape="oval">
             <solid android:color="@android:color/white" />
