@@ -16,6 +16,8 @@ import timber.log.Timber
 class JellyfinApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        // TV build: record crashes so they can be shown on next launch
+        org.jellyfin.mobile.crash.CrashReporter.install(this)
 
         // Setup logging
         Timber.plant(JellyTree())

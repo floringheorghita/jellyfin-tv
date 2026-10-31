@@ -32,3 +32,7 @@
 -assumevalues class android.os.Build$VERSION {
   int SDK_INT return 21..2147483647;
 }
+
+# TV build: keep crash reports readable (real class names and line numbers)
+-dontobfuscate
+-keepattributes SourceFile,LineNumberTable

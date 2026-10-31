@@ -149,6 +149,8 @@ class MainActivity : AppCompatActivity() {
 
         // TV build: check GitHub for a newer build (only on a fresh start, not on rotation etc.)
         if (savedInstanceState == null) {
+            // TV build: report how the previous run ended, if it crashed or was killed
+            org.jellyfin.mobile.crash.CrashReporter.showPendingReport(this)
             AppUpdater.check(this, lifecycleScope, manual = false)
         }
     }
