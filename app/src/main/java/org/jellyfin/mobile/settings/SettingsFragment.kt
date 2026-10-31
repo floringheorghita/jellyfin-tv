@@ -335,18 +335,11 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
     private fun sendDiagnostics() {
         val activity = requireActivity()
         val baseUrl = apiClient.baseUrl
-        val token = apiClient.accessToken
-        if (baseUrl == null || token == null) {
+        val authorization = org.jellyfin.mobile.crash.DiagnosticsLog.authorizationFor(apiClient)
+        if (baseUrl == null || authorization == null) {
             showDiagnosticsText("Not signed in to a server, so the log can't be uploaded.")
             return
         }
-        val authorization = org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder.buildHeader(
-            clientName = apiClient.clientInfo.name,
-            clientVersion = apiClient.clientInfo.version,
-            deviceId = apiClient.deviceInfo.id,
-            deviceName = apiClient.deviceInfo.name,
-            accessToken = token,
-        )
         android.widget.Toast.makeText(activity, "Sending diagnostics…", android.widget.Toast.LENGTH_SHORT).show()
         viewLifecycleOwner.lifecycleScope.launch {
             val (fileName, error) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

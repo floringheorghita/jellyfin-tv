@@ -126,6 +126,40 @@ object DiagnosticsLog {
         null to e.toString()
     }
 
+    /** Authorization header for the signed-in Jellyfin user, or null if not signed in. */
+    fun authorizationFor(apiClient: org.jellyfin.sdk.api.client.ApiClient): String? {
+        val token = apiClient.accessToken ?: return null
+        return org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder.buildHeader(
+            clientName = apiClient.clientInfo.name,
+            clientVersion = apiClient.clientInfo.version,
+            deviceId = apiClient.deviceInfo.id,
+            deviceName = apiClient.deviceInfo.name,
+            accessToken = token,
+        )
+    }
+
+    /**
+     * Sends the report automatically if the previous run played a video (and hasn't been sent yet).
+     * @return the uploaded file name, or null if nothing was sent
+     */
+    fun autoUploadIfNeeded(apiClient: org.jellyfin.sdk.api.client.ApiClient): String? {
+        val dir = dir ?: return null
+        val prev = File(dir, "previous.log")
+        val marker = File(dir, "previous.sent")
+        if (!prev.exists() || (marker.exists() && marker.lastModified() >= prev.lastModified())) return null
+        if (!prev.readText().contains("PlayerFragment created")) return null
+        val baseUrl = apiClient.baseUrl ?: return null
+        val auth = authorizationFor(apiClient) ?: return null
+        val (name, error) = upload(baseUrl, auth)
+        if (name != null) {
+            marker.writeText(name)
+            log("Diagnostics auto-uploaded as $name")
+        } else {
+            log("Diagnostics auto-upload failed: $error")
+        }
+        return name
+    }
+
     /** Timber tree that copies INFO and above into the diagnostics log. */
     class Tree : Timber.Tree() {
         override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {

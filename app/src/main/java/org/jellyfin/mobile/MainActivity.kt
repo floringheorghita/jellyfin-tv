@@ -31,6 +31,7 @@ import org.jellyfin.mobile.update.AppUpdater
 import org.jellyfin.mobile.setup.ConnectFragment
 import org.jellyfin.mobile.utils.AndroidVersion
 import org.jellyfin.mobile.utils.BackPressInterceptor
+import org.jellyfin.mobile.utils.extensions.addFragment
 import org.jellyfin.mobile.utils.BluetoothPermissionHelper
 import org.jellyfin.mobile.utils.Constants
 import org.jellyfin.mobile.utils.PermissionRequestHelper
@@ -151,6 +152,22 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             // TV build: report how the previous run ended, if it crashed or was killed
             org.jellyfin.mobile.crash.CrashReporter.showPendingReport(this)
+            // TV build: if the last run played a video, send its diagnostics to the server once signed in
+            lifecycleScope.launch {
+                val apiClient: org.jellyfin.sdk.api.client.ApiClient = get()
+                repeat(12) {
+                    kotlinx.coroutines.delay(5_000)
+                    if (apiClient.accessToken != null) {
+                        val name = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            org.jellyfin.mobile.crash.DiagnosticsLog.autoUploadIfNeeded(apiClient)
+                        }
+                        if (name != null) {
+                            Toast.makeText(this@MainActivity, "Diagnostics sent to Jellyfin server", Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+                }
+            }
             AppUpdater.check(this, lifecycleScope, manual = false)
         }
     }
@@ -207,6 +224,13 @@ class MainActivity : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
         if (currentFragment is PlayerFragment && currentFragment.isVisible && currentFragment.handleKeyEvent(event)) {
+            return true
+        }
+        // TV build: the remote's Menu (☰) button opens the Nexus Cinema settings from the web interface
+        if (event.keyCode == KeyEvent.KEYCODE_MENU && currentFragment is org.jellyfin.mobile.webapp.WebViewFragment) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                supportFragmentManager.addFragment<org.jellyfin.mobile.settings.SettingsFragment>()
+            }
             return true
         }
         return super.dispatchKeyEvent(event)
