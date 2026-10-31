@@ -100,6 +100,8 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
         val window = requireActivity().window
         playerFullscreenHelper = PlayerFullscreenHelper(window)
 
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("PlayerFragment created")
+
         // Observe ViewModel
         viewModel.player.observe(this) { player ->
             playerView.player = player
@@ -538,6 +540,7 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
     }
 
     override fun onDestroyView() {
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("PlayerFragment view destroyed")
         super.onDestroyView()
         // Detach player from PlayerView
         playerView.player = null

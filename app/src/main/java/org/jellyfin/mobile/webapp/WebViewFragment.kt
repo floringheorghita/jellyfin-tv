@@ -71,6 +71,9 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
     // UI
     private var webViewBinding: FragmentWebviewBinding? = null
 
+    /** TV build: the live WebView (replaced if its renderer process dies) */
+    private var currentWebView: WebView? = null
+
     // External file access
     private var fileChooserActivityLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -94,7 +97,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
         ) {
             override fun onConnectedToWebapp() {
                 val webViewBinding = webViewBinding ?: return
-                val webView = webViewBinding.webView
+                val webView = currentWebView ?: return
                 webView.removeCallbacks(timeoutRunnable)
                 webView.removeCallbacks(showLoadingContainerRunnable)
                 connected = true
@@ -110,6 +113,16 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
             override fun onErrorReceived() {
                 handleError()
             }
+
+            // TV build: on low-memory devices Fire OS can kill the WebView's renderer process while
+            // the native player is on screen. Unhandled, Android then closes the whole app.
+            // Handle it and quietly rebuild the web interface instead.
+            override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                val crashed = if (AndroidVersion.isAtLeastO) detail.didCrash() else null
+                org.jellyfin.mobile.crash.DiagnosticsLog.log("WebView renderer gone (crashed=$crashed) - rebuilding web interface · " + org.jellyfin.mobile.crash.DiagnosticsLog.memoryLine())
+                runOnUiThread { recreateWebView(view) }
+                return true
+            }
         }
         externalPlayer = ExternalPlayer(requireContext(), this, requireActivity().activityResultRegistry)
     }
@@ -123,6 +136,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val webView = webViewBinding!!.webView
+        currentWebView = webView
 
         // Apply window insets
         webView.applyWindowInsetsAsMargins()
@@ -157,6 +171,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
         webView.initialize()
 
         webViewBinding!!.useDifferentServerButton.setOnClickListener {
+            val webView = currentWebView ?: return@setOnClickListener
             webView.removeCallbacks(timeoutRunnable)
             webView.stopLoading()
             webViewBinding!!.loadingContainer.isVisible = false
@@ -166,7 +181,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
         // Process JS functions called from other components (e.g. the PlayerActivity)
         lifecycleScope.launch {
             for (function in webappFunctionChannel) {
-                webView.evaluateJavascript(function, null)
+                currentWebView?.evaluateJavascript(function, null)
             }
         }
     }
@@ -177,10 +192,34 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
 
     override fun onDestroyView() {
         super.onDestroyView()
+        currentWebView = null
         webViewBinding = null
     }
 
-    private fun WebView.initialize() {
+    /** TV build: swap a dead WebView for a fresh one in the same place and reload the web interface. */
+    private fun recreateWebView(dead: WebView) {
+        if (dead !== currentWebView || !isAdded) return
+        val parent = dead.parent as? ViewGroup ?: return
+        val index = parent.indexOfChild(dead)
+        val layoutParams = dead.layoutParams
+        dead.removeCallbacks(timeoutRunnable)
+        dead.removeCallbacks(showLoadingContainerRunnable)
+        parent.removeView(dead)
+        dead.destroy()
+
+        val fresh = WebView(requireContext()).apply {
+            id = dead.id
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+        parent.addView(fresh, index, layoutParams)
+        currentWebView = fresh
+        connected = false
+        // No connection timeout here: a slow reload must not throw the user out to server selection
+        fresh.initialize(withTimeout = false)
+    }
+
+    private fun WebView.initialize(withTimeout: Boolean = true) {
         if (!appPreferences.ignoreWebViewChecks && isOutdated()) { // Check WebView version
             showOutdatedWebViewDialog(this)
             return
@@ -194,7 +233,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
         addJavascriptInterface(mediaSegments, "MediaSegments")
 
         loadUrl("${server.hostname.trimEnd('/')}/")
-        postDelayed(timeoutRunnable, Constants.INITIAL_CONNECTION_TIMEOUT)
+        if (withTimeout) postDelayed(timeoutRunnable, Constants.INITIAL_CONNECTION_TIMEOUT)
         postDelayed(showLoadingContainerRunnable, Constants.SHOW_PROGRESS_BAR_DELAY)
     }
 

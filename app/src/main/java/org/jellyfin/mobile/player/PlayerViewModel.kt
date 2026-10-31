@@ -294,6 +294,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application),
      * Release the current ExoPlayer and stop/release the current MediaSession
      */
     private fun releasePlayer() {
+        org.jellyfin.mobile.crash.DiagnosticsLog.log(
+            "Player released, called from: " +
+                Throwable().stackTrace.drop(1).take(4).joinToString(" <- ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" },
+        )
         notificationHelper.dismissNotification()
         mediaSession.isActive = false
         mediaSession.release()
@@ -334,6 +338,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application),
             while (true) {
                 delay(Constants.PLAYER_TIME_UPDATE_RATE)
                 playerOrNull?.reportPlaybackState()
+                // TV build: memory trend during playback for the diagnostics log
+                val position = playerOrNull?.currentPosition?.div(1000)
+                val memory = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { org.jellyfin.mobile.crash.DiagnosticsLog.memoryLine() }
+                org.jellyfin.mobile.crash.DiagnosticsLog.log("playing at ${position}s · $memory")
             }
         }
     }
@@ -718,6 +726,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application),
         val player = playerOrNull ?: return
 
         // Notify fragment of current state
+        if (_playerState.value != playbackState) {
+            org.jellyfin.mobile.crash.DiagnosticsLog.log("Player state $playbackState (1=idle 2=buffering 3=ready 4=ended) playWhenReady=$playWhenReady")
+        }
         _playerState.value = playbackState
 
         // Initialise various components

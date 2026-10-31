@@ -14,6 +14,16 @@ import timber.log.Timber
 
 @Suppress("unused")
 class JellyfinApplication : Application() {
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("onTrimMemory level=$level · " + org.jellyfin.mobile.crash.DiagnosticsLog.memoryLine())
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("onLowMemory · " + org.jellyfin.mobile.crash.DiagnosticsLog.memoryLine())
+    }
+
     override fun onCreate() {
         super.onCreate()
         // TV build: record crashes so they can be shown on next launch
@@ -21,6 +31,9 @@ class JellyfinApplication : Application() {
 
         // Setup logging
         Timber.plant(JellyTree())
+        // TV build: diagnostics log (Settings > Send diagnostics)
+        org.jellyfin.mobile.crash.DiagnosticsLog.init(this)
+        Timber.plant(org.jellyfin.mobile.crash.DiagnosticsLog.Tree())
 
         if (BuildConfig.DEBUG) {
             // Enable WebView debugging

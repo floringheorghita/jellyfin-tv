@@ -212,7 +212,19 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    // TV build: lifecycle breadcrumbs for the diagnostics log
+    override fun onPause() {
+        super.onPause()
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("MainActivity onPause")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("MainActivity onResume")
+    }
+
     override fun onUserLeaveHint() {
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("MainActivity onUserLeaveHint (Home pressed / app left)")
         super.onUserLeaveHint()
         for (fragment in supportFragmentManager.fragments) {
             if (fragment is PlayerFragment && fragment.isVisible) {
@@ -223,10 +235,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("MainActivity onStop finishing=$isFinishing")
         orientationListener.disable()
     }
 
     override fun onDestroy() {
+        org.jellyfin.mobile.crash.DiagnosticsLog.log("MainActivity onDestroy finishing=$isFinishing changingConfig=$isChangingConfigurations")
         unbindService(serviceConnection)
         chromecast.destroy()
         super.onDestroy()

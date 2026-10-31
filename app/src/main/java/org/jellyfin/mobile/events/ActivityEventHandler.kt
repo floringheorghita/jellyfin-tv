@@ -109,6 +109,7 @@ class ActivityEventHandler(
                 mainViewModel.resetServer()
             }
             ActivityEvent.ExitApp -> {
+                org.jellyfin.mobile.crash.DiagnosticsLog.log("Web interface asked the app to exit (web player playing=${serviceBinder?.isPlaying})")
                 if (serviceBinder?.isPlaying == true) {
                     moveTaskToBack(false)
                 } else {

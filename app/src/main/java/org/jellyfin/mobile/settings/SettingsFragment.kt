@@ -10,6 +10,7 @@ import android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.Maxr1998.modernpreferences.Preference
 import de.Maxr1998.modernpreferences.PreferencesAdapter
 import de.Maxr1998.modernpreferences.helpers.categoryHeader
@@ -43,6 +44,7 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
     private val appPreferences: AppPreferences by inject()
     private val storageManager: StorageManager by inject()
     private val webappFunctionChannel: org.jellyfin.mobile.webapp.WebappFunctionChannel by inject()
+    private val apiClient: org.jellyfin.sdk.api.client.ApiClient by inject()
 
     private val storageLocationPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -115,6 +117,14 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
             SelectionItem(Constants.TV_SIZE_SMALL, "Small", "Like the desktop browser (recommended for 4K TVs)"),
             SelectionItem(Constants.TV_SIZE_EXTRA_SMALL, "Extra small", "Most content on screen"),
         )
+        pref("pref_send_diagnostics") {
+            title = "Send diagnostics to Jellyfin server"
+            summary = "Uploads this app's log so problems can be investigated (Dashboard > Logs)"
+            onClick {
+                sendDiagnostics()
+                false
+            }
+        }
         singleChoice(Constants.PREF_TV_INTERFACE_SIZE, interfaceSizes) {
             title = "Interface size"
             initialSelection = Constants.TV_SIZE_SMALL
@@ -319,6 +329,60 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
                 false
             }
         }
+    }
+
+    /** TV build: upload the diagnostics log to the Jellyfin server's client log endpoint. */
+    private fun sendDiagnostics() {
+        val activity = requireActivity()
+        val baseUrl = apiClient.baseUrl
+        val token = apiClient.accessToken
+        if (baseUrl == null || token == null) {
+            showDiagnosticsText("Not signed in to a server, so the log can't be uploaded.")
+            return
+        }
+        val authorization = org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder.buildHeader(
+            clientName = apiClient.clientInfo.name,
+            clientVersion = apiClient.clientInfo.version,
+            deviceId = apiClient.deviceInfo.id,
+            deviceName = apiClient.deviceInfo.name,
+            accessToken = token,
+        )
+        android.widget.Toast.makeText(activity, "Sending diagnostics…", android.widget.Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (fileName, error) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                org.jellyfin.mobile.crash.DiagnosticsLog.upload(baseUrl, authorization)
+            }
+            if (!isAdded) return@launch
+            if (fileName != null) {
+                androidx.appcompat.app.AlertDialog.Builder(activity)
+                    .setTitle("Diagnostics sent")
+                    .setMessage("On your PC, open Jellyfin > Dashboard > Logs and open:\n\n$fileName")
+                    .setPositiveButton("OK", null)
+                    .show()
+            } else {
+                showDiagnosticsText(
+                    "Upload failed: $error\n\n" + org.jellyfin.mobile.crash.DiagnosticsLog.buildReport().takeLast(6000),
+                )
+            }
+        }
+    }
+
+    private fun showDiagnosticsText(text: String) {
+        val activity = requireActivity()
+        val view = android.widget.TextView(activity).apply {
+            this.text = text
+            textSize = 10f
+            setTextIsSelectable(true)
+            isFocusable = true
+            movementMethod = android.text.method.ScrollingMovementMethod()
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, pad / 2)
+        }
+        androidx.appcompat.app.AlertDialog.Builder(activity)
+            .setTitle("Diagnostics")
+            .setView(view)
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     companion object {
