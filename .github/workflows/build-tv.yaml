@@ -31,6 +31,12 @@ jobs:
             echo "::error::KEYSTORE_BASE64 or KEYSTORE_PASSWORD secret is missing (Settings > Secrets and variables > Actions)"
             exit 1
           fi
+          # If the two secrets were pasted into each other's boxes, swap them back
+          # (the key is thousands of characters; the password is short)
+          if [ ${#KEYSTORE_BASE64} -lt 200 ] && [ ${#KEYSTORE_PASSWORD} -ge 200 ]; then
+            echo "::notice::Secrets look swapped - using KEYSTORE_PASSWORD as the key and KEYSTORE_BASE64 as the password"
+            TMP="$KEYSTORE_BASE64"; KEYSTORE_BASE64="$KEYSTORE_PASSWORD"; KEYSTORE_PASSWORD="$TMP"
+          fi
           KS="$RUNNER_TEMP/jellyfin-tv.jks"
           # Tolerate stray spaces/newlines picked up when pasting the secrets
           printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$KS" || {
