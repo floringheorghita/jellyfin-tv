@@ -128,7 +128,11 @@ class PlayerNotificationHelper(private val viewModel: PlayerViewModel) : KoinCom
             }.build()
 
             nm.notify(VIDEO_PLAYER_NOTIFICATION_ID, notification)
-            PlayerService.start(context, notification)
+            // TV build: don't start the foreground PlayerService. It only exists to keep phone playback
+            // alive in the background. On Fire OS 7 / Android 9 it failed to reach startForeground()
+            // within the 10s limit, so Android flagged the app as not responding and killed it
+            // ~25-30s into every video ("Context.startForegroundService() did not then call
+            // Service.startForeground()").
         }
 
         if (receiverRegistered.compareAndSet(false, true)) {
