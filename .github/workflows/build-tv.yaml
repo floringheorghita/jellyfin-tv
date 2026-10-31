@@ -1,4 +1,4 @@
-name: Build Jellyfin TV
+name: Build Nexus Cinema
 
 on:
   push:
@@ -98,5 +98,5 @@ jobs:
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest out/jellyfin-tv.apk out/version.json \
-            --title "Jellyfin TV 1.0.${{ github.run_number }}" \
+            --title "Nexus Cinema 1.0.${{ github.run_number }}" \
             --notes "Built from ${{ github.sha }}"

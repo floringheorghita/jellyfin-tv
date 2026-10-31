@@ -48,7 +48,7 @@ object AppUpdater {
             when {
                 remote == null -> if (manual) toast(activity, "Couldn't check for updates")
                 remote.build > BuildConfig.TV_BUILD -> offerUpdate(activity, scope, remote)
-                manual -> toast(activity, "Jellyfin TV is up to date (${BuildConfig.VERSION_NAME})")
+                manual -> toast(activity, "Nexus Cinema is up to date (${BuildConfig.VERSION_NAME})")
             }
         }
     }
@@ -73,7 +73,7 @@ object AppUpdater {
     private fun offerUpdate(activity: Activity, scope: LifecycleCoroutineScope, remote: RemoteVersion) {
         AlertDialog.Builder(activity)
             .setTitle("Update available")
-            .setMessage("Jellyfin TV ${remote.versionName} is available (you have ${BuildConfig.VERSION_NAME}).")
+            .setMessage("Nexus Cinema ${remote.versionName} is available (you have ${BuildConfig.VERSION_NAME}).")
             .setPositiveButton("Update now") { _, _ -> download(activity, scope) }
             .setNegativeButton("Later", null)
             .show()
@@ -152,8 +152,8 @@ object AppUpdater {
         AlertDialog.Builder(activity)
             .setTitle("Allow updates")
             .setMessage(
-                "To update itself, Jellyfin TV needs permission to install apps.\n\n" +
-                    "Turn it on for Jellyfin TV on the next screen, then press Back and choose Update now again.",
+                "To update itself, Nexus Cinema needs permission to install apps.\n\n" +
+                    "Turn it on for Nexus Cinema on the next screen, then press Back and choose Update now again.",
             )
             .setPositiveButton("Open settings") { _, _ ->
                 val intent = Intent(
@@ -166,7 +166,7 @@ object AppUpdater {
                     Timber.w(e)
                     toast(
                         activity,
-                        "Open Settings → My Fire TV → Developer options → Install unknown apps and allow Jellyfin TV",
+                        "Open Settings → My Fire TV → Developer options → Install unknown apps and allow Nexus Cinema",
                     )
                 }
             }

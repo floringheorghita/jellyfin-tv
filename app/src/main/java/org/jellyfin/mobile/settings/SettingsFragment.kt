@@ -98,7 +98,7 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
         collapseIcon = true
         // TV build: manual update check
         categoryHeader("pref_category_app_update") {
-            title = "Jellyfin TV"
+            title = "Nexus Cinema"
         }
         pref("pref_check_for_updates") {
             title = "Check for updates"

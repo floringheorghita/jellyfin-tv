@@ -1,4 +1,6 @@
-# Jellyfin TV (Nexus build)
+# Nexus Cinema
+
+Jellyfin for Android TV and Fire TV, styled to match the Nexus dashboard.
 
 A TV build of the official [Jellyfin Android app](https://github.com/jellyfin/jellyfin-android)
 for Android TV and Fire TV. Like the LG webOS app, it shows the server's **web interface**
