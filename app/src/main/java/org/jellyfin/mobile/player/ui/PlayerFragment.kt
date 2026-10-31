@@ -228,6 +228,10 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
         fullscreenSwitcher.setOnClickListener {
             toggleFullscreen()
         }
+
+        // TV build: hide phone-only controls (screen rotation / touch lock) so the remote doesn't stop on them
+        fullscreenSwitcher.isVisible = false
+        playerControlsBinding.lockScreenButton.isVisible = false
     }
 
     override fun onStart() {

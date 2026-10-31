@@ -18,8 +18,9 @@ proper codec support.
 GitHub Actions builds a signed APK on every push to `main` and publishes it to the
 `latest` release. Run it by hand from the Actions tab with "Run workflow".
 
-Signing uses the keystore in `signing/`. Keep using it: Android only installs an update
-over the existing app when it's signed with the same key.
+Signing uses a keystore stored in the repo's Actions secrets (`KEYSTORE_BASE64`,
+`KEYSTORE_PASSWORD`), not in the code. Keep using the same key: Android only installs an
+update over the existing app when it's signed with the same key.
 
 ## Licence
 GPL-2.0, as upstream (see LICENSE.md).

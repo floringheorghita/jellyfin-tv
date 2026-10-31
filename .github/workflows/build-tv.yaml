@@ -21,16 +21,36 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Signing key lives in the repo's Actions secrets, never in the code
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is missing (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/jellyfin-tv.jks"
+
       # libre flavour: no Google Play services, which Fire TV doesn't have
       - name: Build APK
         env:
           JELLYFIN_VERSION: 1.0.${{ github.run_number }}
           JELLYFIN_TV_BUILD: ${{ github.run_number }}
-          KEYSTORE_FILE: ${{ github.workspace }}/signing/jellyfin-tv.jks
-          KEYSTORE_PASSWORD: jellyfintv
+          KEYSTORE_FILE: ${{ runner.temp }}/jellyfin-tv.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           SIGNING_KEY_ALIAS: jellyfintv
-          SIGNING_KEY_PASSWORD: jellyfintv
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: ./gradlew --no-daemon :app:assembleLibreRelease
+
+      # Refuse to publish an unsigned build (it couldn't install over the existing app)
+      - name: Check APK is signed
+        run: |
+          ls app/build/outputs/apk/libre/release/
+          if ls app/build/outputs/apk/libre/release/*unsigned*.apk >/dev/null 2>&1; then
+            echo "::error::APK is unsigned - check the KEYSTORE_PASSWORD secret"
+            exit 1
+          fi
 
       - name: Collect APK
         run: |
