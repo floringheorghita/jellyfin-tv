@@ -42,6 +42,7 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
 
     private val appPreferences: AppPreferences by inject()
     private val storageManager: StorageManager by inject()
+    private val webappFunctionChannel: org.jellyfin.mobile.webapp.WebappFunctionChannel by inject()
 
     private val storageLocationPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -106,6 +107,20 @@ class SettingsFragment : Fragment(), BackPressInterceptor {
             onClick {
                 AppUpdater.check(requireActivity(), viewLifecycleOwner.lifecycleScope, manual = true)
                 false
+            }
+        }
+        val interfaceSizes = listOf(
+            SelectionItem(Constants.TV_SIZE_LARGE, "Large", "Jellyfin's standard TV sizing"),
+            SelectionItem(Constants.TV_SIZE_MEDIUM, "Medium", null),
+            SelectionItem(Constants.TV_SIZE_SMALL, "Small", "Like the desktop browser (recommended for 4K TVs)"),
+            SelectionItem(Constants.TV_SIZE_EXTRA_SMALL, "Extra small", "Most content on screen"),
+        )
+        singleChoice(Constants.PREF_TV_INTERFACE_SIZE, interfaceSizes) {
+            title = "Interface size"
+            initialSelection = Constants.TV_SIZE_SMALL
+            defaultOnSelectionChange { selection ->
+                // Apply straight away to the web interface behind this screen
+                webappFunctionChannel.call("window.nexusApplyInterfaceSize && window.nexusApplyInterfaceSize('$selection');")
             }
         }
         categoryHeader(PREF_CATEGORY_MUSIC_PLAYER) {

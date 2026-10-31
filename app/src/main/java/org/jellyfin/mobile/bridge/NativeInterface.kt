@@ -48,6 +48,11 @@ class NativeInterface(private val context: Context) : KoinComponent {
     private val activityEventHandler: ActivityEventHandler = get()
     private val remoteVolumeProvider: RemoteVolumeProvider by inject()
     private val deviceProfileBuilder: DeviceProfileBuilder by inject()
+    private val appPreferences: org.jellyfin.mobile.app.AppPreferences by inject()
+
+    /** TV build: interface size chosen in Settings (large / medium / small / xsmall) */
+    @JavascriptInterface
+    fun getInterfaceSize(): String = appPreferences.tvInterfaceSize
 
     @SuppressLint("HardwareIds")
     @JavascriptInterface

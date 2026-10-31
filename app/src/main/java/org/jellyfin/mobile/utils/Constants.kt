@@ -9,6 +9,13 @@ import org.jellyfin.mobile.BuildConfig
 object Constants {
     // App Info
     const val APP_INFO_NAME = "Nexus Cinema"
+
+    // TV build: interface size (web layout width / text size)
+    const val PREF_TV_INTERFACE_SIZE = "pref_tv_interface_size"
+    const val TV_SIZE_LARGE = "large"
+    const val TV_SIZE_MEDIUM = "medium"
+    const val TV_SIZE_SMALL = "small"
+    const val TV_SIZE_EXTRA_SMALL = "xsmall"
     const val APP_INFO_VERSION: String = BuildConfig.VERSION_NAME
 
     // Webapp constants

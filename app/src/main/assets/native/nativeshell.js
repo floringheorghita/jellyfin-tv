@@ -133,3 +133,48 @@ window.NativeShell.AppHost = {
         window.NativeInterface.exitApp();
     }
 };
+
+// ---------------------------------------------------------------------------
+// TV build: interface size.
+// Android TV draws apps as if a 4K/1080p screen were ~960px wide, so the web
+// interface comes out huge. Lay it out at a desktop-like width instead and let
+// the WebView scale it to fit, with a smaller base font for the TV layout.
+// [layout width in CSS px, base font size in px]; null = Jellyfin's own TV sizing
+// ---------------------------------------------------------------------------
+const NEXUS_SIZES = {
+    large: null,
+    medium: [1600, 18],
+    small: [1920, 16],
+    xsmall: [1920, 14]
+};
+let nexusOriginalViewport = null;
+
+window.nexusApplyInterfaceSize = function (sizeKey) {
+    const key = sizeKey || window.NativeInterface.getInterfaceSize();
+    const size = Object.prototype.hasOwnProperty.call(NEXUS_SIZES, key) ? NEXUS_SIZES[key] : NEXUS_SIZES.small;
+
+    let meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'viewport';
+        document.head.appendChild(meta);
+    }
+    if (nexusOriginalViewport === null) nexusOriginalViewport = meta.content;
+
+    let style = document.getElementById('nexus-interface-size');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'nexus-interface-size';
+        document.head.appendChild(style);
+    }
+
+    if (!size) {
+        meta.content = nexusOriginalViewport;
+        style.textContent = '';
+    } else {
+        meta.content = `width=${size[0]}, user-scalable=no, viewport-fit=cover`;
+        style.textContent = `html.layout-tv { font-size: ${size[1]}px !important; }`;
+    }
+};
+
+window.nexusApplyInterfaceSize();

@@ -72,6 +72,9 @@ private fun WebView.getDefaultUserAgentString(): String {
 fun WebSettings.applyDefault() {
     javaScriptEnabled = true
     domStorageEnabled = true
+    // TV build: lay the page out at the width set in nativeshell.js and scale it to fit the screen
+    useWideViewPort = true
+    loadWithOverviewMode = true
     setSupportMultipleWindows(true)
 }
 

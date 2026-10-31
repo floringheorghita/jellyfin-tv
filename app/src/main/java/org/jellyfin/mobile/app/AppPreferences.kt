@@ -32,6 +32,10 @@ class AppPreferences(context: Context) {
             }
         }
 
+    /** TV build: how large the web interface is drawn (see nativeshell.js) */
+    val tvInterfaceSize: String
+        get() = sharedPreferences.getString(Constants.PREF_TV_INTERFACE_SIZE, null) ?: Constants.TV_SIZE_SMALL
+
     var ignoreBatteryOptimizations: Boolean
         get() = sharedPreferences.getBoolean(Constants.PREF_IGNORE_BATTERY_OPTIMIZATIONS, false)
         set(value) {
