@@ -1,0 +1,96 @@
+name: Sync official Jellyfin app
+
+# Weekly: merge new commits from the official jellyfin/jellyfin-android app into Nexus Cinema.
+# If they merge cleanly and the app still builds, publish a new release (TVs get it via the
+# in-app updater). If they clash with our TV changes, or the build breaks, the run fails and
+# nothing is published - GitHub emails the repo owner about the failed run.
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch official app
+        id: fetch
+        run: |
+          BASE="$(tr -d '[:space:]' < .upstream-base)"
+          git fetch --no-tags https://github.com/jellyfin/jellyfin-android.git master
+          NEW="$(git rev-parse FETCH_HEAD)"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          if [ "$BASE" = "$NEW" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Already up to date with the official app (${NEW:0:7})"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git log --oneline "$BASE..$NEW" > "$RUNNER_TEMP/changes.txt"
+          echo "::notice::$(wc -l < "$RUNNER_TEMP/changes.txt") new official commits (${BASE:0:7}..${NEW:0:7})"
+
+      - name: Merge official changes
+        if: steps.fetch.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git update-index -q --refresh
+          # Their CI/store files aren't used here
+          git diff --binary "${{ steps.fetch.outputs.base }}" "${{ steps.fetch.outputs.new }}" -- . \
+            ':(exclude).github' ':(exclude)fastlane' ':(exclude)renovate.json' > "$RUNNER_TEMP/upstream.patch"
+          if [ -s "$RUNNER_TEMP/upstream.patch" ]; then
+            if ! git apply --3way --index "$RUNNER_TEMP/upstream.patch"; then
+              echo "::error::Official changes clash with Nexus Cinema changes in: $(git diff --name-only --diff-filter=U | tr '\n' ' ')- needs a manual merge"
+              exit 1
+            fi
+          fi
+          echo "${{ steps.fetch.outputs.new }}" > .upstream-base
+          git add .upstream-base
+
+      - uses: actions/setup-java@v4
+        if: steps.fetch.outputs.changed == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.fetch.outputs.changed == 'true'
+
+      - name: Check it still builds
+        if: steps.fetch.outputs.changed == 'true'
+        run: |
+          set +e
+          ./gradlew --no-daemon :app:assembleLibreDebug 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            grep -E "^e: " build.log | head -15 | sed 's/^/::error::/'
+            grep -A6 "What went wrong" build.log | head -14 | sed 's/^/::error::/'
+            echo "::error::Merged official changes don't build - nothing published"
+          fi
+          rm -f build.log
+          exit $status
+
+      - name: Commit and publish
+        if: steps.fetch.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NEW="${{ steps.fetch.outputs.new }}"
+          git commit -q -m "Sync official jellyfin-android ${NEW:0:7}" -m "$(head -60 "$RUNNER_TEMP/changes.txt")"
+          git push origin HEAD:main
+          # Pushes made with the workflow token don't trigger other workflows, so start the release build directly
+          gh workflow run build-tv.yaml --ref main
