@@ -139,7 +139,18 @@ object DiagnosticsLog {
     }
 
     /**
-     * Sends the report automatically if the previous run played a video (and hasn't been sent yet).
+     * True if a run's log shows it ended badly: the process died while the app was on screen
+     * (crash, ANR, killed) - i.e. its last lifecycle event isn't onStop/onDestroy - or the
+     * WebView renderer died during it.
+     */
+    private fun endedBadly(log: String): Boolean {
+        if (log.contains("WebView renderer gone")) return true
+        val lastLifecycle = log.lineSequence().filter { "MainActivity on" in it }.lastOrNull() ?: return false
+        return "onStop" !in lastLifecycle && "onDestroy" !in lastLifecycle
+    }
+
+    /**
+     * Sends the report automatically if the previous run ended badly (and it hasn't been sent yet).
      * @return the uploaded file name, or null if nothing was sent
      */
     fun autoUploadIfNeeded(apiClient: org.jellyfin.sdk.api.client.ApiClient): String? {
@@ -147,7 +158,7 @@ object DiagnosticsLog {
         val prev = File(dir, "previous.log")
         val marker = File(dir, "previous.sent")
         if (!prev.exists() || (marker.exists() && marker.lastModified() >= prev.lastModified())) return null
-        if (!prev.readText().contains("PlayerFragment created")) return null
+        if (!endedBadly(prev.readText())) return null
         val baseUrl = apiClient.baseUrl ?: return null
         val auth = authorizationFor(apiClient) ?: return null
         val (name, error) = upload(baseUrl, auth)

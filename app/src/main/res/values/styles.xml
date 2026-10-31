@@ -11,8 +11,9 @@
     <style name="AppTheme" parent="AppTheme.V21" />
 
     <style name="AppTheme.Starting" parent="Theme.SplashScreen">
+        <!-- TV build: Nexus splash (navy background, hexagon mark) -->
         <item name="windowSplashScreenBackground">@color/theme_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_nexus_foreground</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 

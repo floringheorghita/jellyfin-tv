@@ -152,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             // TV build: report how the previous run ended, if it crashed or was killed
             org.jellyfin.mobile.crash.CrashReporter.showPendingReport(this)
-            // TV build: if the last run played a video, send its diagnostics to the server once signed in
+            // TV build: if the last run ended badly (crash / killed while on screen), send its diagnostics once signed in
             lifecycleScope.launch {
                 val apiClient: org.jellyfin.sdk.api.client.ApiClient = get()
                 repeat(12) {
@@ -162,7 +162,11 @@ class MainActivity : AppCompatActivity() {
                             org.jellyfin.mobile.crash.DiagnosticsLog.autoUploadIfNeeded(apiClient)
                         }
                         if (name != null) {
-                            Toast.makeText(this@MainActivity, "Diagnostics sent to Jellyfin server", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Nexus Cinema closed unexpectedly last time - diagnostics sent to Jellyfin server",
+                                Toast.LENGTH_LONG,
+                            ).show()
                         }
                         return@launch
                     }
